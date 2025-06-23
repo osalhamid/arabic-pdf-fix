@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory() as tmp:
     doc    = fitz.open(imgpdf)
     while len(words)<doc.page_count: words.append([])
 
-    canvas = Canvas(out)
+    canvas = Canvas(str(out))   # cast Path → str
     for i in range(doc.page_count):
         pg   = doc.load_page(i)
         pix  = pg.get_pixmap(dpi=300)
