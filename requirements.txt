@@ -1,0 +1,7 @@
+ocrmypdf
+pymupdf
+beautifulsoup4
+python-bidi
+arabic_reshaper
+reportlab
+pillow
