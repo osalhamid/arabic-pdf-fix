@@ -1,38 +1,48 @@
 name: Arabic PDF fix
 
 on:
+  # re-run whenever you push a PDF (or the workflow / script itself)
   push:
-    paths: ["**.pdf"]
+    paths: ["**.pdf", ".github/workflows/pdf-fix.yml", "fix_arabic_pdf.py"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # 1  Check out your repository files
       - uses: actions/checkout@v4
 
+      # 2  Install Python 3.11
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      # 3  Install script dependencies
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y tesseract-ocr tesseract-ocr-ara ghostscript
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 4  Run the fixer on every PDF that does **not** already end in -readable.pdf
       - name: Fix PDFs
         run: |
-        head -n 20 fix_arabic_pdf.py      # ← temporary debug line
           for f in $(git ls-files '*.pdf' | grep -v -- '-readable\.pdf$'); do
+            echo "▶️  Processing $f"
             python fix_arabic_pdf.py "$f"
           done
 
+      # 5  Commit any newly-generated *_readable.pdf files
       - name: Commit results
         run: |
           git config user.name  "pdf-bot"
           git config user.email "pdf-bot@users.noreply.github.com"
-          git add *-readable.pdf
-          git commit -m "Add readable Arabic PDFs" || echo "No changes"
-          git push
+          git add *-readable.pdf || true
+          git commit -m "Add readable Arabic PDFs" || echo "No changes to commit"
+
+      # 6  Push back to the same branch
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
