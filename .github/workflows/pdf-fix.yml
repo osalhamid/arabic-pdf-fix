@@ -1,48 +1,56 @@
+# === BEGIN ===
 name: Arabic PDF fix
 
 on:
-  # re-run whenever you push a PDF (or the workflow / script itself)
   push:
-    paths: ["**.pdf", ".github/workflows/pdf-fix.yml", "fix_arabic_pdf.py"]
+    paths: ["**.pdf"]          # run whenever any PDF is pushed
+  workflow_dispatch: {}        # run manually from the Actions tab
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1  Check out your repository files
-      - uses: actions/checkout@v4
+    # 1 — check out repository code
+    - uses: actions/checkout@v4
 
-      # 2  Install Python 3.11
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    # 2 — install Tesseract with Arabic language data
+    - name: Install Tesseract + ara language
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+             tesseract-ocr tesseract-ocr-ara
 
-      # 3  Install script dependencies
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    # 3 — set up Python
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
 
-      # 4  Run the fixer on every PDF that does **not** already end in -readable.pdf
-      - name: Fix PDFs
-        run: |
-          for f in $(git ls-files '*.pdf' | grep -v -- '-readable\.pdf$'); do
-            echo "▶️  Processing $f"
-            python fix_arabic_pdf.py "$f"
-          done
+    # 4 — install Python requirements
+    - name: Install Python deps
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      # 5  Commit any newly-generated *_readable.pdf files
-      - name: Commit results
-        run: |
-          git config user.name  "pdf-bot"
-          git config user.email "pdf-bot@users.noreply.github.com"
-          git add *-readable.pdf || true
-          git commit -m "Add readable Arabic PDFs" || echo "No changes to commit"
+    # 5 — run the fixer on every PDF that does *not* already end in -readable.pdf
+    - name: Fix PDFs
+      run: |
+        for f in $(git ls-files '*.pdf' | grep -v -- '-readable\.pdf$'); do
+          echo "⚙️  Processing $f"
+          python fix_arabic_pdf.py "$f"
+        done
 
-      # 6  Push back to the same branch
-      - name: Push changes
-        uses: ad-m/github-push-action@v0.8.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+    # 6 — commit new *-readable.pdf files (if any)
+    - name: Commit results
+      run: |
+        git config user.name  "pdf-bot"
+        git config user.email "pdf-bot@users.noreply.github.com"
+        git add *-readable.pdf || true
+        git commit -m "Add readable Arabic PDFs" || echo "No changes"
+
+    # 7 — push only when there was a commit above
+    - name: Push changes
+      if: success()            # step runs only if previous steps succeeded
+      run: |
+        git push origin HEAD:main
+# === END ===
