@@ -24,6 +24,7 @@ jobs:
 
       - name: Fix PDFs
         run: |
+        head -n 20 fix_arabic_pdf.py      # ← temporary debug line
           for f in $(git ls-files '*.pdf' | grep -v -- '-readable\.pdf$'); do
             python fix_arabic_pdf.py "$f"
           done
